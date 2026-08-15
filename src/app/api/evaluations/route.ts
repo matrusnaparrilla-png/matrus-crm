@@ -19,8 +19,12 @@ const payloadSchema = z.object({
   best_aspects: z.array(z.string()).max(10),
   improvement_comment: z.string().max(2000).optional(),
   comment: z.string().max(2000).optional(),
-  client_name: z.string().max(120).optional(),
-  client_phone: z.string().max(20).optional(),
+  client_name: z.string().trim().min(2).max(120),
+  client_phone: z.string().trim().min(8).max(20),
+  client_birthdate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .refine((v) => new Date(v) <= new Date(), 'Data de nascimento não pode ser no futuro'),
   categories: z.array(categorySchema).min(1).max(30),
 })
 
@@ -61,8 +65,9 @@ export async function POST(req: NextRequest) {
       best_aspects: payload.best_aspects,
       improvement_comment: payload.improvement_comment ?? '',
       comment: payload.comment ?? '',
-      client_name: payload.client_name ?? '',
-      client_phone: payload.client_phone ?? '',
+      client_name: payload.client_name,
+      client_phone: payload.client_phone,
+      client_birthdate: payload.client_birthdate,
       categories: payload.categories,
     },
   })

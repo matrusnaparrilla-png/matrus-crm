@@ -61,6 +61,7 @@ export interface Evaluation {
   comment: string | null
   client_name: string | null
   client_phone: string | null
+  client_birthdate: string | null
   created_at: string
 }
 
