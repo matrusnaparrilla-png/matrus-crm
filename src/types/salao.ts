@@ -62,6 +62,8 @@ export interface Evaluation {
   client_name: string | null
   client_phone: string | null
   client_birthdate: string | null
+  food_comment: string | null
+  ambience_comment: string | null
   created_at: string
 }
 
@@ -149,8 +151,6 @@ export const CATEGORY_CATALOG: Record<CategoryGroup, CategoryDef[]> = {
   ],
   operacao: [
     { key: 'tempo_pedido', label: 'Tempo para receber o pedido' },
-    { key: 'tempo_pratos', label: 'Tempo para receber os pratos' },
-    { key: 'organizacao_salao', label: 'Organização do salão' },
   ],
 }
 

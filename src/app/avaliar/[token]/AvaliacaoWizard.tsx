@@ -49,7 +49,9 @@ export function AvaliacaoWizard({
   const [waiterCats, setWaiterCats] = useState<CategoryScores>({})
   const [waiterComment, setWaiterComment] = useState('')
   const [foodCats, setFoodCats] = useState<CategoryScores>({})
+  const [foodComment, setFoodComment] = useState('')
   const [ambienceCats, setAmbienceCats] = useState<CategoryScores>({})
+  const [ambienceComment, setAmbienceComment] = useState('')
   const [bestAspects, setBestAspects] = useState<string[]>([])
   const [improvementComment, setImprovementComment] = useState('')
   const [returnIntent, setReturnIntent] = useState<ReturnIntent | ''>('')
@@ -109,6 +111,8 @@ export function AvaliacaoWizard({
           best_aspects: bestAspects,
           improvement_comment: improvementComment,
           comment: waiterComment,
+          food_comment: foodComment,
+          ambience_comment: ambienceComment,
           client_name: clientName.trim(),
           client_phone: clientPhone.trim(),
           client_birthdate: clientBirthdate,
@@ -216,6 +220,12 @@ export function AvaliacaoWizard({
                   <CategoryRow key={c.key} label={c.label} value={foodCats[c.key] ?? 0} onChange={(v) => setFoodCats((s) => ({ ...s, [c.key]: v }))} />
                 ))}
               </div>
+              <textarea
+                value={foodComment}
+                onChange={(e) => setFoodComment(e.target.value)}
+                placeholder="Comentário sobre a comida (opcional)"
+                className="input mt-3 min-h-16 resize-none"
+              />
             </div>
 
             <div>
@@ -226,6 +236,12 @@ export function AvaliacaoWizard({
                   <CategoryRow key={c.key} label={c.label} value={ambienceCats[c.key] ?? 0} onChange={(v) => setAmbienceCats((s) => ({ ...s, [c.key]: v }))} />
                 ))}
               </div>
+              <textarea
+                value={ambienceComment}
+                onChange={(e) => setAmbienceComment(e.target.value)}
+                placeholder="Comentário sobre o ambiente (opcional)"
+                className="input mt-3 min-h-16 resize-none"
+              />
             </div>
 
             <div>

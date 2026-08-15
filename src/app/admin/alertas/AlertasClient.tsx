@@ -106,7 +106,9 @@ export function AlertasClient({ initialAlerts, profileId }: { initialAlerts: Ale
                     <p><strong className="text-neutral-300">Cliente:</strong> {ev?.client_name || 'Anônimo'}{ev?.client_phone ? ` · ${ev.client_phone}` : ''}</p>
                     <p><strong className="text-neutral-300">Intenção de retorno:</strong> {ev ? RETURN_INTENT_LABELS[ev.return_intent as ReturnIntent] : '—'}</p>
                     <p><strong className="text-neutral-300">NPS:</strong> {ev?.nps_score ?? '—'}</p>
-                    {ev?.comment && <p><strong className="text-neutral-300">Comentário:</strong> &ldquo;{ev.comment}&rdquo;</p>}
+                    {ev?.comment && <p><strong className="text-neutral-300">Comentário (atendimento):</strong> &ldquo;{ev.comment}&rdquo;</p>}
+                    {ev?.food_comment && <p><strong className="text-neutral-300">Comentário (comida):</strong> &ldquo;{ev.food_comment}&rdquo;</p>}
+                    {ev?.ambience_comment && <p><strong className="text-neutral-300">Comentário (ambiente):</strong> &ldquo;{ev.ambience_comment}&rdquo;</p>}
                   </div>
 
                   {tab === 'negativo' && (

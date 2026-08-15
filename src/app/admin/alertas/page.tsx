@@ -14,7 +14,8 @@ export default async function AlertasPage() {
     .select(`
       id, type, status, reason, internal_note, created_at, resolved_at,
       evaluation:salao_evaluations(
-        id, overall_score, nps_score, return_intent, comment, client_name, client_phone, created_at,
+        id, overall_score, nps_score, return_intent, comment, food_comment, ambience_comment,
+        client_name, client_phone, created_at,
         waiter:salao_waiters(id, name),
         table:salao_tables(id, number)
       )
@@ -39,6 +40,8 @@ export interface AlertRow {
     nps_score: number
     return_intent: string
     comment: string | null
+    food_comment: string | null
+    ambience_comment: string | null
     client_name: string | null
     client_phone: string | null
     created_at: string
