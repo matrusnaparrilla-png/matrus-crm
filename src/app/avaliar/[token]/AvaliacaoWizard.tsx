@@ -2,12 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { PartyPopper, Loader2, ExternalLink, Star } from 'lucide-react'
-import { StarRating, CategoryRow } from '@/components/salao/StarRating'
-import { CATEGORY_CATALOG, BEST_ASPECT_OPTIONS, RETURN_INTENT_LABELS, type ReturnIntent } from '@/types/salao'
+import { StarRating } from '@/components/salao/StarRating'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
-
-type CategoryScores = Record<string, number>
 
 function getFingerprint() {
   if (typeof window === 'undefined') return ''
@@ -19,6 +16,15 @@ function getFingerprint() {
   }
   return fp
 }
+
+const HOW_HEARD_OPTIONS = [
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'google', label: 'Google' },
+  { value: 'indicacao', label: 'Indicação de amigo/família' },
+  { value: 'passando', label: 'Passando em frente' },
+  { value: 'ja_conhecia', label: 'Já conhecia' },
+  { value: 'outro', label: 'Outro' },
+] as const
 
 export function AvaliacaoWizard({
   sessionId,
@@ -35,7 +41,6 @@ export function AvaliacaoWizard({
   googleReviewLink: string | null
   thankYouMessage: string
 }) {
-  const hasWaiterStep = !!waiterName
   const steps = ['dados', 'avaliacao', 'fim']
   const [stepIndex, setStepIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -44,21 +49,15 @@ export function AvaliacaoWizard({
   const [clientName, setClientName] = useState('')
   const [clientPhone, setClientPhone] = useState('')
   const [clientBirthdate, setClientBirthdate] = useState('')
-  const [overall, setOverall] = useState(0)
 
-  const [waiterCats, setWaiterCats] = useState<CategoryScores>({})
-  const [waiterComment, setWaiterComment] = useState('')
-  const [foodCats, setFoodCats] = useState<CategoryScores>({})
-  const [foodComment, setFoodComment] = useState('')
-  const [ambienceCats, setAmbienceCats] = useState<CategoryScores>({})
-  const [ambienceComment, setAmbienceComment] = useState('')
-  const [bestAspects, setBestAspects] = useState<string[]>([])
-  const [improvementComment, setImprovementComment] = useState('')
-  const [returnIntent, setReturnIntent] = useState<ReturnIntent | ''>('')
-  const [nps, setNps] = useState<number | null>(null)
+  const [howHeard, setHowHeard] = useState('')
+  const [howHeardOther, setHowHeardOther] = useState('')
+  const [recepcao, setRecepcao] = useState(0)
+  const [lanche, setLanche] = useState(0)
+  const [atendimento, setAtendimento] = useState(0)
 
   const current = steps[stepIndex]
-  const progress = current === 'dados' ? 50 : current === 'avaliacao' ? 100 : 100
+  const progress = current === 'dados' ? 50 : 100
 
   const isBirthdateValid = useMemo(() => {
     if (!clientBirthdate) return false
@@ -67,14 +66,12 @@ export function AvaliacaoWizard({
     return d <= new Date()
   }, [clientBirthdate])
 
-  const canAdvanceDados = clientName.trim().length >= 2 && clientPhone.trim().length >= 8 && isBirthdateValid && overall > 0
+  const canAdvanceDados = clientName.trim().length >= 2 && clientPhone.trim().length >= 8 && isBirthdateValid
 
   const canSubmit = useMemo(() => {
-    const waiterOk = !hasWaiterStep || CATEGORY_CATALOG.atendimento.every((c) => (waiterCats[c.key] ?? 0) > 0)
-    const foodOk = CATEGORY_CATALOG.comida.every((c) => (foodCats[c.key] ?? 0) > 0)
-    const ambienceOk = [...CATEGORY_CATALOG.ambiente, ...CATEGORY_CATALOG.operacao].every((c) => (ambienceCats[c.key] ?? 0) > 0)
-    return waiterOk && foodOk && ambienceOk && returnIntent !== '' && nps !== null
-  }, [hasWaiterStep, waiterCats, foodCats, ambienceCats, returnIntent, nps])
+    const howHeardOk = howHeard !== '' && (howHeard !== 'outro' || howHeardOther.trim().length > 0)
+    return howHeardOk && recepcao > 0 && lanche > 0 && atendimento > 0
+  }, [howHeard, howHeardOther, recepcao, lanche, atendimento])
 
   function goToAvaliacao() {
     if (!canAdvanceDados) return
@@ -88,13 +85,19 @@ export function AvaliacaoWizard({
   async function handleSubmit() {
     if (!canSubmit) return
     setSubmitting(true)
+
+    const avg = (recepcao + lanche + atendimento) / 3
+    const overallScore = Math.round(avg)
+    const npsScore = Math.max(0, Math.min(10, Math.round(avg * 2)))
+    const returnIntent =
+      avg >= 4.5 ? 'certamente' : avg >= 3.5 ? 'provavelmente' : avg >= 2.5 ? 'talvez' : avg >= 1.5 ? 'provavelmente_nao' : 'nao_voltaria'
+    const howHeardLabel = HOW_HEARD_OPTIONS.find((o) => o.value === howHeard)?.label ?? howHeard
+    const howHeardText = howHeard === 'outro' ? `Outro: ${howHeardOther.trim()}` : howHeardLabel
+
     const categories = [
-      ...(hasWaiterStep
-        ? CATEGORY_CATALOG.atendimento.map((c) => ({ group: 'atendimento' as const, category: c.key, score: waiterCats[c.key] }))
-        : []),
-      ...CATEGORY_CATALOG.comida.map((c) => ({ group: 'comida' as const, category: c.key, score: foodCats[c.key] })),
-      ...CATEGORY_CATALOG.ambiente.map((c) => ({ group: 'ambiente' as const, category: c.key, score: ambienceCats[c.key] })),
-      ...CATEGORY_CATALOG.operacao.map((c) => ({ group: 'operacao' as const, category: c.key, score: ambienceCats[c.key] })),
+      { group: 'atendimento' as const, category: 'recepcao', score: recepcao },
+      { group: 'comida' as const, category: 'lanche', score: lanche },
+      { group: 'atendimento' as const, category: 'atendimento_geral', score: atendimento },
     ]
 
     try {
@@ -105,14 +108,11 @@ export function AvaliacaoWizard({
           session_id: sessionId,
           qr_code_id: qrCodeId,
           fingerprint: getFingerprint(),
-          overall_score: overall,
-          nps_score: nps,
+          overall_score: overallScore,
+          nps_score: npsScore,
           return_intent: returnIntent,
-          best_aspects: bestAspects,
-          improvement_comment: improvementComment,
-          comment: waiterComment,
-          food_comment: foodComment,
-          ambience_comment: ambienceComment,
+          best_aspects: [],
+          comment: howHeardText,
           client_name: clientName.trim(),
           client_phone: clientPhone.trim(),
           client_birthdate: clientBirthdate,
@@ -164,7 +164,7 @@ export function AvaliacaoWizard({
             <h2 className="text-lg font-semibold text-white mb-1">Seus dados</h2>
             <p className="text-sm text-neutral-500 mb-5">Preencha para começar sua avaliação</p>
 
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5">Nome *</label>
                 <input value={clientName} onChange={(e) => setClientName(e.target.value)} className="input" placeholder="Seu nome" />
@@ -184,137 +184,56 @@ export function AvaliacaoWizard({
                 />
               </div>
             </div>
-
-            <p className="text-sm text-neutral-300 mb-2.5">De 1 a 5, como você avalia sua experiência na {companyName}?</p>
-            <div className="flex justify-center py-4">
-              <StarRating value={overall} onChange={setOverall} size={40} />
-            </div>
           </div>
         )}
 
         {current === 'avaliacao' && (
-          <div className="space-y-7">
-            {hasWaiterStep && (
-              <div>
-                <h2 className="text-base font-semibold text-white mb-1">Seu atendente</h2>
-                <p className="text-sm text-neutral-500 mb-2">Como você avalia o atendimento de {waiterName}?</p>
-                <div className="divide-y divide-surface-border">
-                  {CATEGORY_CATALOG.atendimento.map((c) => (
-                    <CategoryRow key={c.key} label={c.label} value={waiterCats[c.key] ?? 0} onChange={(v) => setWaiterCats((s) => ({ ...s, [c.key]: v }))} />
-                  ))}
-                </div>
-                <textarea
-                  value={waiterComment}
-                  onChange={(e) => setWaiterComment(e.target.value)}
-                  placeholder="Comentário sobre o atendimento (opcional)"
-                  className="input mt-3 min-h-16 resize-none"
-                />
-              </div>
-            )}
-
+          <div className="space-y-8">
             <div>
-              <h2 className="text-base font-semibold text-white mb-1">A comida</h2>
-              <p className="text-sm text-neutral-500 mb-2">Como você avalia os pratos que experimentou?</p>
-              <div className="divide-y divide-surface-border">
-                {CATEGORY_CATALOG.comida.map((c) => (
-                  <CategoryRow key={c.key} label={c.label} value={foodCats[c.key] ?? 0} onChange={(v) => setFoodCats((s) => ({ ...s, [c.key]: v }))} />
-                ))}
-              </div>
-              <textarea
-                value={foodComment}
-                onChange={(e) => setFoodComment(e.target.value)}
-                placeholder="Comentário sobre a comida (opcional)"
-                className="input mt-3 min-h-16 resize-none"
-              />
-            </div>
-
-            <div>
-              <h2 className="text-base font-semibold text-white mb-1">Ambiente e agilidade</h2>
-              <p className="text-sm text-neutral-500 mb-2">Como foi o ambiente e o tempo de espera?</p>
-              <div className="divide-y divide-surface-border">
-                {[...CATEGORY_CATALOG.ambiente, ...CATEGORY_CATALOG.operacao].map((c) => (
-                  <CategoryRow key={c.key} label={c.label} value={ambienceCats[c.key] ?? 0} onChange={(v) => setAmbienceCats((s) => ({ ...s, [c.key]: v }))} />
-                ))}
-              </div>
-              <textarea
-                value={ambienceComment}
-                onChange={(e) => setAmbienceComment(e.target.value)}
-                placeholder="Comentário sobre o ambiente (opcional)"
-                className="input mt-3 min-h-16 resize-none"
-              />
-            </div>
-
-            <div>
-              <p className="text-sm text-neutral-300 mb-2.5">Qual foi a melhor parte da sua experiência?</p>
+              <p className="text-sm font-medium text-neutral-300 mb-2.5">Como você conheceu a Matrus?</p>
               <div className="flex flex-wrap gap-2">
-                {BEST_ASPECT_OPTIONS.map((opt) => {
-                  const selected = bestAspects.includes(opt.value)
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setBestAspects((s) => (selected ? s.filter((v) => v !== opt.value) : [...s, opt.value]))}
-                      className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
-                        selected ? 'bg-brand-500/15 border-brand-500 text-brand-400' : 'border-surface-border text-neutral-400'
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-sm text-neutral-300 mb-2">O que podemos melhorar?</p>
-              <textarea
-                value={improvementComment}
-                onChange={(e) => setImprovementComment(e.target.value)}
-                placeholder="Opcional"
-                className="input min-h-16 resize-none"
-              />
-            </div>
-
-            <div>
-              <p className="text-sm text-neutral-300 mb-2.5">Você voltaria à {companyName}?</p>
-              <div className="grid grid-cols-1 gap-2">
-                {(Object.entries(RETURN_INTENT_LABELS) as [ReturnIntent, string][]).map(([value, label]) => (
+                {HOW_HEARD_OPTIONS.map((opt) => (
                   <button
-                    key={value}
+                    key={opt.value}
                     type="button"
-                    onClick={() => setReturnIntent(value)}
+                    onClick={() => setHowHeard(opt.value)}
                     className={cn(
-                      'text-left px-3.5 py-2.5 rounded-lg text-sm font-medium border transition-colors',
-                      returnIntent === value ? 'bg-brand-500/15 border-brand-500 text-brand-400' : 'border-surface-border text-neutral-300'
+                      'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                      howHeard === opt.value ? 'bg-brand-500/15 border-brand-500 text-brand-400' : 'border-surface-border text-neutral-400'
                     )}
                   >
-                    {label}
+                    {opt.label}
                   </button>
                 ))}
               </div>
+              {howHeard === 'outro' && (
+                <input
+                  value={howHeardOther}
+                  onChange={(e) => setHowHeardOther(e.target.value)}
+                  className="input mt-3"
+                  placeholder="Como você conheceu?"
+                />
+              )}
             </div>
 
             <div>
-              <p className="text-sm text-neutral-300 mb-2.5">Você recomendaria a {companyName} para um amigo?</p>
-              <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
-                {Array.from({ length: 11 }, (_, i) => i).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setNps(n)}
-                    className={cn(
-                      'aspect-square rounded-lg text-xs font-semibold border transition-colors',
-                      nps === n ? 'bg-brand-500 border-brand-500 text-white' : 'border-surface-border text-neutral-400'
-                    )}
-                  >
-                    {n}
-                  </button>
-                ))}
+              <p className="text-sm font-medium text-neutral-300 mb-2.5">Como foi a recepção?</p>
+              <div className="flex justify-center py-2">
+                <StarRating value={recepcao} onChange={setRecepcao} size={36} />
               </div>
-              <div className="flex justify-between text-[10px] text-neutral-600 mt-1">
-                <span>Nada provável</span>
-                <span>Muito provável</span>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-neutral-300 mb-2.5">Como estava o lanche?</p>
+              <div className="flex justify-center py-2">
+                <StarRating value={lanche} onChange={setLanche} size={36} />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-neutral-300 mb-2.5">Como foi o atendimento?</p>
+              <div className="flex justify-center py-2">
+                <StarRating value={atendimento} onChange={setAtendimento} size={36} />
               </div>
             </div>
           </div>
